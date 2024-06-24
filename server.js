@@ -1,6 +1,7 @@
 import net from "net";
 import { readHeader, writeHeader } from "./utils.js";
 import { HANDLER_ID, MAX_MESSAGE_LENGTH, TOTAL_LENGTH_SIZE } from "./constants.js";
+import handlers from "./handlers/index.js";
 
 const PORT = 5555;
 
@@ -24,13 +25,24 @@ const server = net.createServer((socket) =>
 			return;
 		}
 
+		const handler = handlers[handlerId];
+
+		// 핸들러 ID 확인
+		if (!handler)
+		{
+			console.error(`에러: ID ${handlerId}에 해당하는 핸들러를 찾을 수 없습니다.`);
+			socket.write(`에러: 핸들러ID ${handlerId}은(는) 유효하지 않습니다.`);
+			socket.end();
+			return;
+		}
+
 		const headerSize = TOTAL_LENGTH_SIZE + HANDLER_ID;
 		// 메시지 추출
 		const message = buffer.slice(headerSize); // 앞의 헤더 부분을 잘라낸다.
 
 		console.log(`클라이언트에게 받은 메세지: ${message}`);
 
-		const responseMessage = "Hi!, There";
+		const responseMessage = handler(message);
 		const responseBuffer = Buffer.from(responseMessage);
 
 		const header = writeHeader(responseBuffer.length, handlerId);
